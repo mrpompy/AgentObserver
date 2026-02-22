@@ -25,7 +25,7 @@ export default function TraceNode({ trace, depth = 0, maxDuration, onSelect, sel
           if (hasChildren) setExpanded(!expanded);
         }}
         className={cn(
-          'w-full text-left flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors group',
+          'w-full text-left flex items-center gap-2 py-1.5 px-2 rounded-md transition-all duration-200 group',
           selectedId === trace.id ? 'bg-gray-800' : 'hover:bg-gray-800/50'
         )}
         style={{ paddingLeft: `${depth * 20 + 8}px` }}
@@ -46,7 +46,7 @@ export default function TraceNode({ trace, depth = 0, maxDuration, onSelect, sel
 
         <div className="flex-1 mx-2 h-3 bg-gray-800/50 rounded-full overflow-hidden">
           <div
-            className={cn('h-full rounded-full transition-all', getSpanColor(trace.span_name))}
+            className={cn('h-full rounded-full transition-all duration-200', getSpanColor(trace.span_name))}
             style={{ width: `${barWidth}%`, opacity: 0.6 }}
           />
         </div>
@@ -56,9 +56,14 @@ export default function TraceNode({ trace, depth = 0, maxDuration, onSelect, sel
         </span>
       </button>
 
-      {expanded && hasChildren && (
-        <div>
-          {trace.children!.map((child) => (
+      <div
+        className={cn(
+          'overflow-hidden transition-all duration-200',
+          expanded && hasChildren ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+        )}
+      >
+        {hasChildren &&
+          trace.children!.map((child) => (
             <TraceNode
               key={child.id}
               trace={child}
@@ -68,8 +73,7 @@ export default function TraceNode({ trace, depth = 0, maxDuration, onSelect, sel
               selectedId={selectedId}
             />
           ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

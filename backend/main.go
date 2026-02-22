@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	"agent-observer/datasync"
 	"agent-observer/db"
 	"agent-observer/handlers"
-	"agent-observer/seed"
+	"agent-observer/parser"
+	"agent-observer/scanner"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -17,9 +19,30 @@ func main() {
 	// Initialize database
 	db.InitDB()
 
-	// Seed database if empty
-	if db.IsEmpty() {
-		seed.SeedDB()
+	// Parse and sync all existing Claude Code sessions
+	log.Println("Starting initial sync of Claude Code sessions...")
+	if err := datasync.SyncAll(); err != nil {
+		log.Printf("Warning: initial sync encountered errors: %v", err)
+	}
+
+	// Start the file scanner to watch for new/updated sessions
+	sc := scanner.NewScanner(parser.ClaudeDataDir)
+	sc.OnUpdate = func(sessionID string) {
+		log.Printf("Session %s updated, re-syncing...", sessionID)
+		if err := datasync.SyncSingleSession(sessionID); err != nil {
+			log.Printf("Error syncing session %s: %v", sessionID, err)
+			return
+		}
+		// Broadcast update to WebSocket clients
+		handlers.WSHub.Broadcast(gin.H{
+			"type": "session_updated",
+			"data": gin.H{"session_id": sessionID},
+		})
+	}
+	if err := sc.Start(); err != nil {
+		log.Printf("Warning: failed to start file scanner: %v", err)
+	} else {
+		defer sc.Stop()
 	}
 
 	// Set up Gin router
@@ -43,21 +66,21 @@ func main() {
 	{
 		// Teams
 		api.GET("/teams", handlers.ListTeams)
-		api.GET("/teams/:id", handlers.GetTeam)
 		api.POST("/teams", handlers.CreateTeam)
+
+		// Team detail routes (use :id consistently)
+		api.GET("/teams/:id", handlers.GetTeam)
+		api.GET("/teams/:id/agents", handlers.ListAgentsByTeam)
+		api.GET("/teams/:id/conversations", handlers.ListConversationsByTeam)
 
 		// Agents
 		api.GET("/agents/:id", handlers.GetAgent)
-		api.GET("/teams/:teamId/agents", handlers.ListAgentsByTeam)
+		api.GET("/agents/:id/traces", handlers.GetAgentTraces)
 
 		// Conversations
-		api.GET("/teams/:teamId/conversations", handlers.ListConversationsByTeam)
 		api.GET("/conversations/:id", handlers.GetConversation)
 		api.GET("/conversations/:id/messages", handlers.GetConversationMessages)
-
-		// Traces
 		api.GET("/conversations/:id/traces", handlers.GetConversationTraces)
-		api.GET("/agents/:id/traces", handlers.GetAgentTraces)
 	}
 
 	// Internal endpoints (for agentlogger SDK)

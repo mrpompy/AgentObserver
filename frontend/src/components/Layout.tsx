@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import { Wifi, WifiOff } from 'lucide-react';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 export default function Layout() {
@@ -13,19 +12,15 @@ export default function Layout() {
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="h-12 bg-gray-900/50 backdrop-blur-sm border-b border-gray-800 flex items-center justify-end px-4 shrink-0">
+        <header className="h-12 bg-gray-900/50 border-b border-gray-800 flex items-center justify-between px-5 shrink-0">
+          <span className="text-sm font-semibold text-gray-300">智能体观测台</span>
           <div className="flex items-center gap-2 text-xs">
-            {connected ? (
-              <>
-                <Wifi className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-green-400">Live</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="w-3.5 h-3.5 text-gray-500" />
-                <span className="text-gray-500">Disconnected</span>
-              </>
-            )}
+            <span
+              className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-600'}`}
+            />
+            <span className={connected ? 'text-green-400' : 'text-gray-500'}>
+              {connected ? '已连接' : '未连接'}
+            </span>
           </div>
         </header>
 

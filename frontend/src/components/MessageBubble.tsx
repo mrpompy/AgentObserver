@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Cpu, Wrench, Brain, Hash } from 'lucide-react';
+import { ChevronDown, ChevronRight, Brain, Wrench, Bot } from 'lucide-react';
 import type { Message } from '../types';
-import { cn, formatDate } from '../lib/utils';
+import { formatRelativeTime } from '../lib/utils';
 
 interface MessageBubbleProps {
   message: Message;
@@ -10,104 +10,217 @@ interface MessageBubbleProps {
 export default function MessageBubble({ message }: MessageBubbleProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const hasThoughts = message.raw_thoughts && Object.keys(message.raw_thoughts).length > 0;
+  const hasThinking = message.raw_thoughts?.thinking;
+  const hasToolCalls = message.raw_thoughts?.tool_calls && message.raw_thoughts.tool_calls.length > 0;
+  const hasTokenUsage = message.raw_thoughts?.token_usage;
+  const hasLegacyThoughts = message.raw_thoughts?.reasoning || message.raw_thoughts?.decision;
+  const hasThoughts = hasThinking || hasToolCalls || hasTokenUsage || hasLegacyThoughts;
 
-  const roleStyles: Record<string, string> = {
-    user: 'ml-8 bg-blue-600/20 border-blue-500/30',
-    agent: 'mr-8 bg-gray-800/80 border-gray-700/50',
-    system: 'mx-auto max-w-lg bg-gray-800/40 border-gray-700/30 text-center italic',
-    teammate_message: 'mr-8 bg-gray-800/80 border-l-2 border-l-green-500 border-t border-r border-b border-gray-700/50',
-  };
-
-  const roleLabels: Record<string, string> = {
-    user: 'User',
-    agent: 'Agent',
-    system: 'System',
-    teammate_message: 'Teammate',
-  };
-
-  const roleLabelColors: Record<string, string> = {
-    user: 'text-blue-400',
-    agent: 'text-cyan-400',
-    system: 'text-gray-500',
-    teammate_message: 'text-green-400',
-  };
-
-  return (
-    <div className={cn('rounded-lg border p-3 mb-2', roleStyles[message.role] ?? roleStyles.agent)}>
-      <div className="flex items-center justify-between mb-1">
-        <span className={cn('text-xs font-medium', roleLabelColors[message.role] ?? 'text-gray-400')}>
-          {roleLabels[message.role] ?? message.role}
-        </span>
-        <span className="text-xs text-gray-600">{formatDate(message.created_at)}</span>
+  // System messages: full-width centered
+  if (message.role === 'system') {
+    return (
+      <div className="flex justify-center my-2">
+        <div className="max-w-lg bg-gray-900/50 rounded-lg px-4 py-2 text-center">
+          <p className="text-xs text-gray-500 italic whitespace-pre-wrap">{message.content}</p>
+          <p className="text-[10px] text-gray-700 mt-1">{formatRelativeTime(message.created_at)}</p>
+        </div>
       </div>
+    );
+  }
 
-      <p className="text-sm text-gray-200 whitespace-pre-wrap break-words">{message.content}</p>
+  // User messages: right-aligned blue bubble
+  if (message.role === 'user') {
+    return (
+      <div className="flex justify-end my-2">
+        <div className="max-w-[80%]">
+          <p className="text-[10px] text-gray-500 mb-1 text-right mr-1">用户</p>
+          <div className="bg-blue-600 text-white rounded-2xl rounded-br-md px-4 py-2.5">
+            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+          </div>
+          <p className="text-[10px] text-gray-600 mt-1 text-right mr-1">
+            {formatRelativeTime(message.created_at)}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-      {hasThoughts && (
-        <div className="mt-2 pt-2 border-t border-gray-700/50">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-          >
-            {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            <Brain className="w-3.5 h-3.5" />
-            Raw Thoughts
-          </button>
-
-          {expanded && message.raw_thoughts && (
-            <div className="mt-2 space-y-2 text-xs">
-              {message.raw_thoughts.iteration !== undefined && (
-                <div className="flex items-center gap-2 text-gray-400">
-                  <Hash className="w-3.5 h-3.5" />
-                  <span>Iteration: {message.raw_thoughts.iteration}</span>
-                </div>
-              )}
-
-              {message.raw_thoughts.decision && (
-                <div className="flex items-center gap-2 text-gray-400">
-                  <Cpu className="w-3.5 h-3.5" />
-                  <span>Decision: <span className="text-cyan-400">{message.raw_thoughts.decision}</span></span>
-                </div>
-              )}
-
-              {message.raw_thoughts.reasoning && (
-                <div className="bg-gray-900/60 rounded-md p-2">
-                  <p className="text-gray-400 mb-1 font-medium">Reasoning:</p>
-                  <p className="text-gray-300 whitespace-pre-wrap">{message.raw_thoughts.reasoning}</p>
-                </div>
-              )}
-
-              {message.raw_thoughts.tool_calls && message.raw_thoughts.tool_calls.length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-gray-400">
-                    <Wrench className="w-3.5 h-3.5" />
-                    <span className="font-medium">Tool Calls:</span>
-                  </div>
-                  {message.raw_thoughts.tool_calls.map((tool, i) => (
-                    <div key={i} className="bg-gray-900/60 rounded-md p-2 font-mono">
-                      <div className="text-blue-400 mb-1">{tool.name}</div>
-                      <pre className="text-gray-400 overflow-x-auto text-[11px]">
-                        {JSON.stringify(tool.args, null, 2)}
-                      </pre>
-                      {tool.result && (
-                        <div className="mt-1.5 pt-1.5 border-t border-gray-700/50">
-                          <span className="text-green-400">Result: </span>
-                          <span className="text-gray-300">{tool.result}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {message.raw_thoughts.tokens_used !== undefined && (
-                <div className="text-gray-500 text-right">
-                  Tokens: {message.raw_thoughts.tokens_used.toLocaleString()}
-                </div>
+  // Teammate messages: left-aligned with green accent
+  if (message.role === 'teammate_message') {
+    return (
+      <div className="flex justify-start my-2">
+        <div className="max-w-[85%]">
+          <p className="text-[10px] text-green-500 mb-1 ml-1">协作体</p>
+          <div className="flex gap-2">
+            <div className="w-6 h-6 rounded-full bg-green-900/50 border border-green-800 flex items-center justify-center shrink-0 mt-0.5">
+              <Bot className="w-3 h-3 text-green-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="bg-green-900/20 border-l-2 border-green-500 rounded-2xl rounded-bl-md px-4 py-2.5">
+                <p className="text-sm text-gray-200 whitespace-pre-wrap break-words">{message.content}</p>
+              </div>
+              <div className="flex items-center gap-2 mt-1 ml-1">
+                <p className="text-[10px] text-gray-600">
+                  {formatRelativeTime(message.created_at)}
+                </p>
+                {hasThoughts && (
+                  <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
+                  >
+                    {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                    <Brain className="w-3 h-3" />
+                    查看思考
+                  </button>
+                )}
+              </div>
+              {expanded && hasThoughts && (
+                <ThinkingPanel message={message} />
               )}
             </div>
-          )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Agent messages: left-aligned gray bubble with avatar
+  return (
+    <div className="flex justify-start my-2">
+      <div className="max-w-[85%]">
+        <p className="text-[10px] text-cyan-500 mb-1 ml-1">智能体</p>
+        <div className="flex gap-2">
+          <div className="w-6 h-6 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center shrink-0 mt-0.5">
+            <Bot className="w-3 h-3 text-cyan-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="bg-gray-800 rounded-2xl rounded-bl-md px-4 py-2.5">
+              <p className="text-sm text-gray-200 whitespace-pre-wrap break-words">{message.content}</p>
+            </div>
+            <div className="flex items-center gap-2 mt-1 ml-1">
+              <p className="text-[10px] text-gray-600">
+                {formatRelativeTime(message.created_at)}
+              </p>
+              {hasThoughts && (
+                <button
+                  onClick={() => setExpanded(!expanded)}
+                  className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
+                >
+                  {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                  <Brain className="w-3 h-3" />
+                  Thinking
+                </button>
+              )}
+            </div>
+            {expanded && hasThoughts && (
+              <ThinkingPanel message={message} />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ThinkingPanel({ message }: { message: Message }) {
+  const rt = message.raw_thoughts;
+  if (!rt) return null;
+
+  const totalTokens = rt.token_usage
+    ? rt.token_usage.input + rt.token_usage.output
+    : undefined;
+
+  return (
+    <div className="mt-2 ml-8 bg-gray-900/80 border border-gray-800 rounded-lg p-3 transition-all duration-200">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Brain className="w-3.5 h-3.5 text-purple-400" />
+        <span className="text-xs font-medium text-purple-400">思考过程</span>
+      </div>
+
+      {/* Thinking text */}
+      {rt.thinking && (
+        <div className="mb-2">
+          <pre className="text-xs text-gray-400 whitespace-pre-wrap font-mono bg-gray-950/50 rounded-md p-2 max-h-48 overflow-y-auto">
+            {rt.thinking}
+          </pre>
+        </div>
+      )}
+
+      {/* Legacy reasoning */}
+      {rt.reasoning && !rt.thinking && (
+        <div className="mb-2">
+          <pre className="text-xs text-gray-400 whitespace-pre-wrap font-mono bg-gray-950/50 rounded-md p-2 max-h-48 overflow-y-auto">
+            {rt.reasoning}
+          </pre>
+        </div>
+      )}
+
+      {/* Legacy decision */}
+      {rt.decision && (
+        <div className="mb-2 flex items-center gap-1.5 text-xs text-gray-400">
+          <span className="text-gray-500">决策：</span>
+          <span className="text-cyan-400 font-medium">{rt.decision}</span>
+        </div>
+      )}
+
+      {/* Tool calls */}
+      {rt.tool_calls && rt.tool_calls.length > 0 && (
+        <div className="space-y-1.5 mb-2">
+          {rt.tool_calls.map((tool, i) => (
+            <div key={tool.id ?? i} className="flex items-start gap-2 bg-gray-950/50 rounded-md p-2">
+              <Wrench className="w-3 h-3 text-blue-400 mt-0.5 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <span className="text-[11px] font-medium text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">
+                  {tool.name}
+                </span>
+                {tool.input != null && (
+                  <pre className="text-[10px] text-gray-500 mt-1 truncate">
+                    {typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input as Record<string, unknown>).slice(0, 120)}
+                  </pre>
+                )}
+                {tool.result && (
+                  <p className="text-[10px] text-green-500 mt-0.5 truncate">{tool.result.slice(0, 100)}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Token usage */}
+      {rt.token_usage && totalTokens !== undefined && (
+        <div className="border-t border-gray-800 pt-2 mt-2">
+          <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
+            <span>Token 用量</span>
+            <span>共 {totalTokens.toLocaleString()}</span>
+          </div>
+          <div className="flex h-1.5 rounded-full overflow-hidden bg-gray-800">
+            <div
+              className="bg-blue-500"
+              style={{ width: `${totalTokens > 0 ? (rt.token_usage.input / totalTokens) * 100 : 0}%` }}
+            />
+            <div
+              className="bg-cyan-500"
+              style={{ width: `${totalTokens > 0 ? (rt.token_usage.output / totalTokens) * 100 : 0}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-600">
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              输入: {rt.token_usage.input.toLocaleString()}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+              输出: {rt.token_usage.output.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Legacy tokens */}
+      {rt.tokens_used !== undefined && !rt.token_usage && (
+        <div className="text-[10px] text-gray-600 text-right mt-1">
+          Token: {rt.tokens_used.toLocaleString()}
         </div>
       )}
     </div>

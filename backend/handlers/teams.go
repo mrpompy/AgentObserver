@@ -20,7 +20,8 @@ type TeamWithStats struct {
 
 func ListTeams(c *gin.Context) {
 	var teams []models.Team
-	if err := db.DB.Find(&teams).Error; err != nil {
+	// Sort by most recently created (which corresponds to most recently active for synced sessions)
+	if err := db.DB.Order("created_at DESC").Find(&teams).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch teams"})
 		return
 	}

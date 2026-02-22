@@ -32,7 +32,7 @@ export default function TraceView() {
 
       <div className="flex-1 min-h-0">
         {isLoading ? (
-          <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-12 animate-pulse h-full" />
+          <div className="bg-gray-900/60 border border-gray-800 rounded-lg p-12 animate-pulse h-full" />
         ) : (
           <TraceViewer traces={traces ?? []} />
         )}

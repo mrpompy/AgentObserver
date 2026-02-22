@@ -1,4 +1,4 @@
-import { format, formatDistanceToNow, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 export function formatDate(dateStr: string): string {
   try {
@@ -10,7 +10,20 @@ export function formatDate(dateStr: string): string {
 
 export function formatRelativeTime(dateStr: string): string {
   try {
-    return formatDistanceToNow(parseISO(dateStr), { addSuffix: true });
+    const date = parseISO(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    if (diffSec < 30) return '刚刚';
+    if (diffSec < 60) return `${diffSec}秒前`;
+    if (diffMin < 60) return `${diffMin}分钟前`;
+    if (diffHr < 24) return `${diffHr}小时前`;
+    if (diffDay < 30) return `${diffDay}天前`;
+    return format(date, 'MM-dd');
   } catch {
     return dateStr;
   }

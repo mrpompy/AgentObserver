@@ -6,10 +6,30 @@ export interface Team {
   status: 'running' | 'stopped' | 'idle';
   created_at: string;
   agents?: Agent[];
-  stats?: {
+}
+
+export interface TeamWithStats extends Team {
+  agent_count: number;
+  conversation_count: number;
+  message_count: number;
+}
+
+export interface TeamDetail {
+  team: Team;
+  recent_conversations: Conversation[];
+  stats: {
     agent_count: number;
     conversation_count: number;
     message_count: number;
+  };
+}
+
+export interface AgentDetail {
+  agent: Agent;
+  stats: {
+    conversation_count: number;
+    message_count: number;
+    avg_token_usage: number;
   };
 }
 
@@ -39,14 +59,29 @@ export interface Message {
   agent_id?: string;
   role: 'user' | 'agent' | 'system' | 'teammate_message';
   content: string;
-  raw_thoughts?: {
-    iteration?: number;
-    decision?: string;
-    tool_calls?: Array<{ name: string; args: Record<string, unknown>; result?: string }>;
-    reasoning?: string;
-    tokens_used?: number;
-  };
+  raw_thoughts?: RawThoughts;
   created_at: string;
+}
+
+export interface RawThoughts {
+  thinking?: string;
+  tool_calls?: Array<{
+    id?: string;
+    name: string;
+    input?: unknown;
+    result?: string;
+  }>;
+  token_usage?: {
+    input: number;
+    output: number;
+    cache_creation: number;
+    cache_read: number;
+  };
+  // Legacy fields from old mock data
+  iteration?: number;
+  decision?: string;
+  reasoning?: string;
+  tokens_used?: number;
 }
 
 export interface Trace {

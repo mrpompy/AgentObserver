@@ -10,7 +10,7 @@ import (
 )
 
 func ListConversationsByTeam(c *gin.Context) {
-	teamID := c.Param("teamId")
+	teamID := c.Param("id")
 
 	var conversations []models.Conversation
 	if err := db.DB.Where("team_id = ?", teamID).Order("started_at DESC").Find(&conversations).Error; err != nil {

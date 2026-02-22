@@ -47,7 +47,7 @@ func GetAgent(c *gin.Context) {
 }
 
 func ListAgentsByTeam(c *gin.Context) {
-	teamID := c.Param("teamId")
+	teamID := c.Param("id")
 
 	var agents []models.Agent
 	if err := db.DB.Where("team_id = ?", teamID).Find(&agents).Error; err != nil {

@@ -54,7 +54,7 @@ export default function TraceViewer({ traces }: TraceViewerProps) {
       {/* Tree */}
       <div className="w-1/2 border-r border-gray-800 overflow-y-auto bg-gray-900/30 p-2">
         {tree.length === 0 ? (
-          <p className="text-sm text-gray-600 text-center py-8">No traces available</p>
+          <p className="text-sm text-gray-600 text-center py-8">暂无追踪数据</p>
         ) : (
           tree.map((trace) => (
             <TraceNode
@@ -82,20 +82,20 @@ export default function TraceViewer({ traces }: TraceViewerProps) {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="w-4 h-4 text-gray-500" />
-                <span className="text-gray-400">Start:</span>
+                <span className="text-gray-400">开始：</span>
                 <span className="text-gray-200 font-mono text-xs">{formatDate(selectedTrace.start_time)}</span>
               </div>
               {selectedTrace.end_time && (
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-400">End:</span>
+                  <span className="text-gray-400">结束：</span>
                   <span className="text-gray-200 font-mono text-xs">{formatDate(selectedTrace.end_time)}</span>
                 </div>
               )}
               {selectedTrace.duration_ms !== undefined && (
                 <div className="flex items-center gap-2 text-sm">
                   <Tag className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-400">Duration:</span>
+                  <span className="text-gray-400">耗时：</span>
                   <span className="text-gray-200 font-mono">{formatDuration(selectedTrace.duration_ms)}</span>
                 </div>
               )}
@@ -105,7 +105,7 @@ export default function TraceViewer({ traces }: TraceViewerProps) {
               <div>
                 <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
                   <FileText className="w-4 h-4" />
-                  <span>Attributes</span>
+                  <span>属性</span>
                 </div>
                 <pre className="bg-gray-900/60 rounded-md p-3 text-xs text-gray-300 font-mono overflow-x-auto">
                   {JSON.stringify(selectedTrace.attributes, null, 2)}
@@ -121,13 +121,13 @@ export default function TraceViewer({ traces }: TraceViewerProps) {
 
             {selectedTrace.children && selectedTrace.children.length > 0 && (
               <div className="text-xs text-gray-600">
-                Children: {selectedTrace.children.length} span(s)
+                子节点：{selectedTrace.children.length} 个
               </div>
             )}
           </div>
         ) : (
           <div className="flex items-center justify-center h-full text-gray-600 text-sm">
-            Select a trace to view details
+            选择追踪节点查看详情
           </div>
         )}
       </div>
