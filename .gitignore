@@ -1,0 +1,15 @@
+# Backend
+backend/agent_observer.db
+backend/agent-observer
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
