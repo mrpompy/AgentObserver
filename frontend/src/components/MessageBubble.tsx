@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Brain, Wrench, Bot } from 'lucide-react';
+import { ChevronDown, ChevronRight, Brain, Bot, Terminal } from 'lucide-react';
 import type { Message } from '../types';
 import { formatRelativeTime } from '../lib/utils';
 
@@ -108,7 +108,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
                 >
                   {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                   <Brain className="w-3 h-3" />
-                  Thinking
+                  查看思考
                 </button>
               )}
             </div>
@@ -167,22 +167,7 @@ function ThinkingPanel({ message }: { message: Message }) {
       {rt.tool_calls && rt.tool_calls.length > 0 && (
         <div className="space-y-1.5 mb-2">
           {rt.tool_calls.map((tool, i) => (
-            <div key={tool.id ?? i} className="flex items-start gap-2 bg-gray-950/50 rounded-md p-2">
-              <Wrench className="w-3 h-3 text-blue-400 mt-0.5 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <span className="text-[11px] font-medium text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">
-                  {tool.name}
-                </span>
-                {tool.input != null && (
-                  <pre className="text-[10px] text-gray-500 mt-1 truncate">
-                    {typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input as Record<string, unknown>).slice(0, 120)}
-                  </pre>
-                )}
-                {tool.result && (
-                  <p className="text-[10px] text-green-500 mt-0.5 truncate">{tool.result.slice(0, 100)}</p>
-                )}
-              </div>
-            </div>
+            <ToolCallItem key={tool.id ?? i} tool={tool} />
           ))}
         </div>
       )}
@@ -221,6 +206,79 @@ function ThinkingPanel({ message }: { message: Message }) {
       {rt.tokens_used !== undefined && !rt.token_usage && (
         <div className="text-[10px] text-gray-600 text-right mt-1">
           Token: {rt.tokens_used.toLocaleString()}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ToolCallItem({ tool }: { tool: { id?: string; name: string; input?: unknown; result?: string } }) {
+  const [showInput, setShowInput] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+
+  const inputStr = tool.input != null
+    ? (typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input as Record<string, unknown>, null, 2))
+    : null;
+  const inputPreview = inputStr && inputStr.length > 120 ? inputStr.slice(0, 120) + '...' : inputStr;
+  const inputIsLong = inputStr != null && inputStr.length > 120;
+
+  const resultStr = tool.result ?? null;
+  const resultPreview = resultStr && resultStr.length > 100 ? resultStr.slice(0, 100) + '...' : resultStr;
+  const resultIsLong = resultStr != null && resultStr.length > 100;
+
+  return (
+    <div className="bg-gray-950/50 rounded-md p-2">
+      <div className="flex items-center gap-2">
+        <Terminal className="w-3 h-3 text-blue-400 shrink-0" />
+        <span className="text-[11px] font-medium text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">
+          {tool.name}
+        </span>
+      </div>
+
+      {/* Input */}
+      {inputStr && (
+        <div className="mt-1.5">
+          <button
+            onClick={() => inputIsLong && setShowInput(!showInput)}
+            className={`w-full text-left ${inputIsLong ? 'cursor-pointer' : 'cursor-default'}`}
+          >
+            <pre className="text-[10px] text-gray-500 whitespace-pre-wrap break-all font-mono bg-gray-900/50 rounded p-1.5 max-h-64 overflow-y-auto">
+              {showInput ? inputStr : inputPreview}
+            </pre>
+          </button>
+          {inputIsLong && (
+            <button
+              onClick={() => setShowInput(!showInput)}
+              className="text-[10px] text-blue-500 hover:text-blue-400 mt-0.5"
+            >
+              {showInput ? '收起' : '展开全部'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Result */}
+      {resultStr && (
+        <div className="mt-1.5">
+          <div className="flex items-center gap-1 mb-0.5">
+            <span className="text-[10px] text-gray-600">输出结果：</span>
+          </div>
+          <button
+            onClick={() => resultIsLong && setShowResult(!showResult)}
+            className={`w-full text-left ${resultIsLong ? 'cursor-pointer' : 'cursor-default'}`}
+          >
+            <pre className="text-[10px] text-green-500/80 whitespace-pre-wrap break-all font-mono bg-gray-900/50 rounded p-1.5 max-h-64 overflow-y-auto">
+              {showResult ? resultStr : resultPreview}
+            </pre>
+          </button>
+          {resultIsLong && (
+            <button
+              onClick={() => setShowResult(!showResult)}
+              className="text-[10px] text-blue-500 hover:text-blue-400 mt-0.5"
+            >
+              {showResult ? '收起' : '展开全部'}
+            </button>
+          )}
         </div>
       )}
     </div>

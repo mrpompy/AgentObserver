@@ -115,7 +115,7 @@ func SyncSession(parsed *parser.ParsedSession) error {
 	}
 
 	// Sync main session messages
-	syncMessages(parsed.MainMessages, parsed.SessionID, convID, leadAgentID, "")
+	syncMessages(parsed.MainMessages, parsed.SessionID, convID, leadAgentID, "", "")
 
 	// Create separate conversations for each subagent and sync their messages
 	for _, sa := range parsed.SubAgents {
@@ -150,7 +150,7 @@ func SyncSession(parsed *parser.ParsedSession) error {
 			log.Printf("Warning: failed to clear old traces for subagent conversation %s: %v", saConvID, err)
 		}
 
-		syncMessages(sa.Messages, parsed.SessionID, saConvID, sa.AgentID, sa.AgentID)
+		syncMessages(sa.Messages, parsed.SessionID, saConvID, sa.AgentID, sa.AgentID, leadAgentID)
 	}
 
 	log.Printf("Finished syncing session %s", parsed.SessionID)
@@ -158,7 +158,9 @@ func SyncSession(parsed *parser.ParsedSession) error {
 }
 
 // syncMessages converts ParsedMessages to database Message and Trace records.
-func syncMessages(messages []parser.ParsedMessage, teamID, convID, defaultAgentID, agentIDForTraces string) {
+// leadAgentID is set when syncing subagent conversations so that "user" messages
+// (which are actually from the lead agent) can be stored as "teammate_message".
+func syncMessages(messages []parser.ParsedMessage, teamID, convID, defaultAgentID, agentIDForTraces, leadAgentID string) {
 	var dbMessages []models.Message
 	var dbTraces []models.Trace
 
@@ -177,7 +179,14 @@ func syncMessages(messages []parser.ParsedMessage, teamID, convID, defaultAgentI
 			if msg.Content == "" {
 				continue
 			}
-			dbRole = "user"
+			// In subagent conversations, "user" messages are actually from the lead agent
+			if leadAgentID != "" {
+				dbRole = "teammate_message"
+				aid := leadAgentID
+				agentIDPtr = &aid
+			} else {
+				dbRole = "user"
+			}
 		case "assistant":
 			dbRole = "agent"
 			aid := defaultAgentID
@@ -241,10 +250,9 @@ func syncMessages(messages []parser.ParsedMessage, teamID, convID, defaultAgentI
 				"input":     tc.Input,
 			}
 			if tc.Result != "" {
-				// Truncate result for storage
 				result := tc.Result
-				if len(result) > 2000 {
-					result = result[:2000] + "...(truncated)"
+				if len(result) > 5000 {
+					result = result[:5000] + "...(已截断)"
 				}
 				attrs["result"] = result
 			}
@@ -357,8 +365,8 @@ func buildRawThoughts(msg parser.ParsedMessage) map[string]interface{} {
 			}
 			if tc.Result != "" {
 				result := tc.Result
-				if len(result) > 1000 {
-					result = result[:1000] + "...(truncated)"
+				if len(result) > 5000 {
+					result = result[:5000] + "...(已截断)"
 				}
 				call["result"] = result
 			}
