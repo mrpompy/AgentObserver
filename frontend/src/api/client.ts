@@ -54,3 +54,8 @@ export async function fetchAgentTraces(agentId: string): Promise<Trace[]> {
   const { data } = await api.get<Trace[]>(`/agents/${agentId}/traces`);
   return data;
 }
+
+export async function fetchTeamGroup(teamName: string): Promise<TeamWithStats[]> {
+  const { data } = await api.get<TeamWithStats[]>(`/team-groups/${encodeURIComponent(teamName)}`);
+  return data;
+}

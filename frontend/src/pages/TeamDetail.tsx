@@ -113,6 +113,14 @@ export default function TeamDetail() {
           </Link>
           {team ? (
             <div>
+              {team.team_name && (
+                <Link
+                  to={`/team-groups/${encodeURIComponent(team.team_name)}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 mb-2 rounded text-[10px] font-medium bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors"
+                >
+                  {team.team_name} &rarr;
+                </Link>
+              )}
               <div className="flex items-center gap-2 mb-2">
                 <h2 className="text-lg font-bold text-gray-100 truncate">{team.name}</h2>
                 <span

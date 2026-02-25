@@ -18,6 +18,8 @@ const ClaudeDataDir = "/Users/huwei/.claude/projects/-Users-huwei"
 type ParsedSession struct {
 	SessionID    string
 	Slug         string // display name from session (e.g. "purring-orbiting-fountain")
+	TeamName     string // Claude Code team name (e.g. "agents-reverse-eng")
+	AgentName    string // Claude Code agent name (e.g. "devops-agent")
 	MainMessages []ParsedMessage
 	SubAgents    []ParsedAgent
 	StartedAt    time.Time
@@ -46,6 +48,8 @@ type ParsedMessage struct {
 	AgentID     string // empty for main session
 	IsSidechain bool
 	Slug        string
+	TeamName    string // Claude Code team name
+	AgentName   string // Claude Code agent name
 }
 
 // ParsedToolCall represents a tool invocation found in assistant content blocks.
@@ -110,10 +114,16 @@ func ParseSessionInDir(dir, sessionID string) (*ParsedSession, error) {
 		MainMessages: mainMessages,
 	}
 
-	// Extract slug and time range from main messages
+	// Extract slug, teamName, agentName, and time range from main messages
 	for _, msg := range mainMessages {
 		if msg.Slug != "" && session.Slug == "" {
 			session.Slug = msg.Slug
+		}
+		if msg.TeamName != "" && session.TeamName == "" {
+			session.TeamName = msg.TeamName
+		}
+		if msg.AgentName != "" && session.AgentName == "" {
+			session.AgentName = msg.AgentName
 		}
 		if !msg.Timestamp.IsZero() {
 			if session.StartedAt.IsZero() || msg.Timestamp.Before(session.StartedAt) {
@@ -194,6 +204,8 @@ type rawLine struct {
 	ParentUUID  *string         `json:"parentUuid"`
 	Timestamp   string          `json:"timestamp"`
 	Message     json.RawMessage `json:"message"`
+	TeamName    string          `json:"teamName"`
+	AgentName   string          `json:"agentName"`
 }
 
 // rawMessage represents the nested message object.
@@ -283,6 +295,8 @@ func ParseJSONLFile(filepath string) ([]ParsedMessage, error) {
 			AgentID:     raw.AgentID,
 			IsSidechain: raw.IsSidechain,
 			Slug:        raw.Slug,
+			TeamName:    raw.TeamName,
+			AgentName:   raw.AgentName,
 			ToolResults: make(map[string]string),
 		}
 

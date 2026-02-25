@@ -12,6 +12,7 @@ type Team struct {
 	Description string    `json:"description"`
 	CreatedBy   string    `json:"created_by"`
 	Status      string    `json:"status"` // running, stopped, idle
+	TeamName    string    `json:"team_name"` // Claude Code team name (for grouping)
 	CreatedAt   time.Time `json:"created_at"`
 	Agents      []Agent   `json:"agents,omitempty" gorm:"foreignKey:TeamID"`
 }

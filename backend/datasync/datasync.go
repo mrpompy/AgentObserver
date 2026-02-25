@@ -33,29 +33,40 @@ func SyncSession(parsed *parser.ParsedSession) error {
 		status = "running"
 	}
 
+	// Determine display name: prefer agentName, then slug
+	displayName := parsed.Slug
+	if parsed.AgentName != "" {
+		displayName = parsed.AgentName
+	}
+
 	// Upsert Team
 	team := models.Team{
 		ID:          parsed.SessionID,
-		Name:        parsed.Slug,
+		Name:        displayName,
 		Description: fmt.Sprintf("Claude Code session: %s", parsed.Slug),
 		CreatedBy:   "claude-code",
 		Status:      status,
+		TeamName:    parsed.TeamName,
 		CreatedAt:   parsed.StartedAt,
 	}
 	if err := db.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"name", "description", "status"}),
+		DoUpdates: clause.AssignmentColumns([]string{"name", "description", "status", "team_name"}),
 	}).Create(&team).Error; err != nil {
 		return fmt.Errorf("failed to upsert team %s: %w", parsed.SessionID, err)
 	}
 
 	// Create or update lead agent (main session)
 	leadAgentID := parsed.SessionID + "-lead"
+	leadAgentName := agentDisplayName(parsed.Slug, "lead")
+	if parsed.AgentName != "" {
+		leadAgentName = parsed.AgentName
+	}
 	leadAgent := models.Agent{
 		ID:        leadAgentID,
 		TeamID:    parsed.SessionID,
 		Role:      "lead",
-		Name:      agentDisplayName(parsed.Slug, "lead"),
+		Name:      leadAgentName,
 		Specialty: "Main Claude Code session",
 		Status:    agentStatus(parsed.MainMessages),
 		CreatedAt: parsed.StartedAt,
@@ -107,6 +118,7 @@ func SyncSession(parsed *parser.ParsedSession) error {
 	}
 
 	// Sync messages: delete existing and re-insert for idempotency
+	// All messages (lead + subagents) go into a single unified conversation.
 	if err := db.DB.Where("conversation_id = ?", convID).Delete(&models.Message{}).Error; err != nil {
 		log.Printf("Warning: failed to clear old messages for conversation %s: %v", convID, err)
 	}
@@ -114,43 +126,17 @@ func SyncSession(parsed *parser.ParsedSession) error {
 		log.Printf("Warning: failed to clear old traces for conversation %s: %v", convID, err)
 	}
 
-	// Sync main session messages
+	// Sync main session messages into the unified conversation
 	syncMessages(parsed.MainMessages, parsed.SessionID, convID, leadAgentID, "", "")
 
-	// Create separate conversations for each subagent and sync their messages
+	// Sync subagent messages into the same unified conversation
 	for _, sa := range parsed.SubAgents {
-		saConvID := parsed.SessionID + "-conv-" + sa.AgentID
-		saConv := models.Conversation{
-			ID:        saConvID,
-			TeamID:    parsed.SessionID,
-			AgentID:   sa.AgentID,
-			Title:     agentDisplayName(sa.Slug, sa.AgentID),
-			StartedAt: agentStartTime(sa.Messages, parsed.StartedAt),
-		}
-		if len(sa.Messages) > 0 {
-			lastMsg := sa.Messages[len(sa.Messages)-1]
-			if !lastMsg.Timestamp.IsZero() {
-				t := lastMsg.Timestamp
-				saConv.EndedAt = &t
-			}
-		}
-		if err := db.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "id"}},
-			DoUpdates: clause.AssignmentColumns([]string{"title", "ended_at"}),
-		}).Create(&saConv).Error; err != nil {
-			log.Printf("Warning: failed to upsert subagent conversation %s: %v", saConvID, err)
-			continue
-		}
+		syncMessages(sa.Messages, parsed.SessionID, convID, sa.AgentID, sa.AgentID, leadAgentID)
+	}
 
-		// Clear and re-sync subagent messages
-		if err := db.DB.Where("conversation_id = ?", saConvID).Delete(&models.Message{}).Error; err != nil {
-			log.Printf("Warning: failed to clear old messages for subagent conversation %s: %v", saConvID, err)
-		}
-		if err := db.DB.Where("conversation_id = ?", saConvID).Delete(&models.Trace{}).Error; err != nil {
-			log.Printf("Warning: failed to clear old traces for subagent conversation %s: %v", saConvID, err)
-		}
-
-		syncMessages(sa.Messages, parsed.SessionID, saConvID, sa.AgentID, sa.AgentID, leadAgentID)
+	// Clean up old per-agent conversations from previous schema
+	if err := db.DB.Where("team_id = ? AND id != ?", parsed.SessionID, convID).Delete(&models.Conversation{}).Error; err != nil {
+		log.Printf("Warning: failed to clean up old per-agent conversations: %v", err)
 	}
 
 	log.Printf("Finished syncing session %s", parsed.SessionID)

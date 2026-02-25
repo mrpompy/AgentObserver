@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/Layout';
 import Overview from './pages/Overview';
 import TeamDetail from './pages/TeamDetail';
+import TeamGroupDetail from './pages/TeamGroupDetail';
 import AgentDetail from './pages/AgentDetail';
 
 const queryClient = new QueryClient({
@@ -72,6 +73,7 @@ function App() {
             <Route element={<Layout />}>
               <Route path="/" element={<Overview />} />
               <Route path="/sessions/:id" element={<TeamDetail />} />
+              <Route path="/team-groups/:teamName" element={<TeamGroupDetail />} />
               <Route path="/agents/:id" element={<AgentDetail />} />
             </Route>
           </Routes>

@@ -20,6 +20,11 @@ export default function TeamCard({ team }: TeamCardProps) {
     >
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0 flex-1 mr-3">
+          {team.team_name && (
+            <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 mb-1">
+              {team.team_name}
+            </span>
+          )}
           <h3 className="text-base font-semibold text-gray-100 group-hover:text-blue-400 transition-colors truncate">
             {team.name}
           </h3>

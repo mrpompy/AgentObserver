@@ -78,6 +78,33 @@ type CreateTeamReq struct {
 	CreatedBy   string `json:"created_by"`
 }
 
+func GetTeamGroup(c *gin.Context) {
+	teamName := c.Param("teamName")
+
+	var teams []models.Team
+	if err := db.DB.Preload("Agents").Where("team_name = ?", teamName).Order("created_at DESC").Find(&teams).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch team group"})
+		return
+	}
+
+	var result []TeamWithStats
+	for _, team := range teams {
+		var agentCount, convCount, msgCount int64
+		db.DB.Model(&models.Agent{}).Where("team_id = ?", team.ID).Count(&agentCount)
+		db.DB.Model(&models.Conversation{}).Where("team_id = ?", team.ID).Count(&convCount)
+		db.DB.Model(&models.Message{}).Where("team_id = ?", team.ID).Count(&msgCount)
+
+		result = append(result, TeamWithStats{
+			Team:              team,
+			AgentCount:        agentCount,
+			ConversationCount: convCount,
+			MessageCount:      msgCount,
+		})
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
 func CreateTeam(c *gin.Context) {
 	var req CreateTeamReq
 	if err := c.ShouldBindJSON(&req); err != nil {

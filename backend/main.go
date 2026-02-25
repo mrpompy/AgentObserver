@@ -68,6 +68,9 @@ func main() {
 		api.GET("/teams", handlers.ListTeams)
 		api.POST("/teams", handlers.CreateTeam)
 
+		// Team groups (by Claude Code teamName)
+		api.GET("/team-groups/:teamName", handlers.GetTeamGroup)
+
 		// Team detail routes (use :id consistently)
 		api.GET("/teams/:id", handlers.GetTeam)
 		api.GET("/teams/:id/agents", handlers.ListAgentsByTeam)

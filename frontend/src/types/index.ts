@@ -4,6 +4,7 @@ export interface Team {
   description: string;
   created_by: string;
   status: 'running' | 'stopped' | 'idle';
+  team_name?: string;
   created_at: string;
   agents?: Agent[];
 }
